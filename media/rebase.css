@@ -1,0 +1,29 @@
+body.page-rebase { background: var(--vscode-editor-background); }
+.rb-root { display: flex; flex-direction: column; height: 100%; }
+.toolbar { border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, transparent)); flex-wrap: wrap; }
+.vsep { width: 1px; height: 16px; margin: 0 4px; background: var(--vscode-panel-border, var(--vscode-widget-border, #8884)); }
+.rb-list { flex: 1; overflow: auto; outline: none; padding: 4px 0; }
+.rb-row {
+  display: grid; grid-template-columns: 18px 90px 80px minmax(200px, 1fr) 170px 140px; align-items: center; gap: 8px;
+  min-height: 26px; padding: 2px 8px; border-top: 2px solid transparent; cursor: default;
+}
+.rb-row:hover { background: var(--vscode-list-hoverBackground); }
+.rb-row.selected { background: var(--vscode-list-inactiveSelectionBackground); }
+.rb-list:focus .rb-row.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground, inherit); }
+.rb-row.over { border-top-color: var(--vscode-focusBorder); }
+.rb-row.dropped .rb-subject, .rb-row.dropped .hash { text-decoration: line-through; opacity: .6; }
+.rb-row .dim { margin-left: 0; overflow: hidden; text-overflow: ellipsis; }
+.grip { cursor: grab; color: var(--vscode-descriptionForeground); text-align: center; }
+.hash { font-family: var(--vscode-editor-font-family); color: var(--vscode-textLink-foreground); }
+.rb-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rb-msg { width: 100%; resize: vertical; padding: 4px; font-family: var(--vscode-editor-font-family); }
+select.rb-action {
+  background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border, transparent); border-radius: 2px; font: inherit; padding: 1px 2px;
+}
+.act-reword { color: #4fa3e0; }
+.act-edit { color: #e5c07b; }
+.act-squash, .act-fixup { color: #c678dd; }
+.act-drop { color: #e06c75; }
+.rb-footer { display: flex; align-items: center; gap: 8px; padding: 8px; border-top: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, transparent)); }
+.rb-footer .dim { margin-left: 0; }

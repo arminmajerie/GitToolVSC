@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="../../media/common.css">
+<link rel="stylesheet" href="../../media/commit.css">
+</head>
+<body class="page-commit"><div id="app"></div>
+<script>
+window.COMMIT_STATUS = {
+  type: 'status', repo: 'C:\\Git\\demo-service', repoName: 'demo-service', branch: 'feature/1188-add-retry-to-export-job', state: '',
+  staged: [{ status: 'M', path: 'src/export/ExportJob.ts' }, { status: 'A', path: 'src/export/RetryPolicy.ts' }],
+  unstaged: [{ status: 'M', path: 'README.md' }, { status: 'M', path: 'pipelines/deploy.yml' }, { status: 'D', path: 'src/export/OldRetry.ts' }],
+  untracked: [{ status: '?', path: 'test/export/RetryPolicy.test.ts' }],
+  conflicts: [],
+  stashes: [{ ref: 'stash@{0}', message: 'On feature/1188-add-retry-to-export-job: spike for batch sizes', date: 1762700000 }, { ref: 'stash@{1}', message: 'On main: logging experiment', date: 1762500000 }]
+};
+</script>
+<script src="demo.js?v=2"></script>
+<script src="../../media/common.js"></script>
+<script src="../../media/commit.js"></script>
+</body></html>

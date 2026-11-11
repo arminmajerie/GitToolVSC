@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="chrome.css">
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="win">
+  <div class="titlebar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="title">demo-service — Visual Studio Code</span></div>
+  <div class="editor-area">
+    <div class="editor-tabs"><span class="active">ExportJob.ts</span><span>RetryPolicy.ts</span></div>
+    <div class="code">export class ExportJob {
+  constructor(private readonly retry: RetryPolicy) {}
+  async run(batch: Batch): Promise&lt;void&gt; { ... }
+}</div>
+  </div>
+  <div class="panel-tabs"><span>PROBLEMS</span><span>OUTPUT</span><span>TERMINAL</span><span class="active">GIT</span></div>
+  <div class="views" style="height: 400px; flex: none;">
+    <div class="view" style="width: 24%"><div class="view-header">BRANCHES</div><iframe id="f-branches" src="part.html?part=branches"></iframe></div>
+    <div class="view" style="flex: 1"><div class="view-header">LOG</div><iframe id="f-commits" src="part.html?part=commits"></iframe></div>
+    <div class="view" style="width: 27%"><div class="view-header">CHANGES</div><iframe id="f-details" src="part.html?part=details"></iframe></div>
+  </div>
+  <div class="statusbar"><span class="branch">&#x2387; demo-service: feature/1188-add-retry-to-export-job &#x2191;1</span><span>Ln 3, Col 12</span></div>
+</div>
+<script src="demo.js"></script>
+<script>
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.relay) for (const f of document.querySelectorAll('iframe')) f.contentWindow.postMessage(e.data.relay, '*');
+});
+</script>
+</body></html>

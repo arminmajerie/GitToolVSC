@@ -1,0 +1,1221 @@
+{
+  "name": "gittoolvsc",
+  "displayName": "Git Tool",
+  "description": "A complete Git tool for VS Code: Git context menu, log with graph and branches, file history, blame, commit and shelf panels, interactive rebase.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arminmajerie/GitToolVSC.git"
+  },
+  "homepage": "https://github.com/arminmajerie/GitToolVSC",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1a1030",
+    "theme": "dark"
+  },
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.145.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Git Tool",
+      "properties": {
+        "vscgit.followActiveEditor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Switch the current repository to the repository of the active editor."
+        },
+        "vscgit.logMaxCount": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 50,
+          "description": "Number of commits loaded at a time in the Git log."
+        },
+        "vscgit.fetchPrune": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prune deleted remote branches when fetching."
+        },
+        "vscgit.repositoryScanDepth": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 3,
+          "description": "How many folder levels below each workspace folder are scanned for Git repositories."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vscgit",
+          "title": "Git Tool",
+          "icon": "media/git-tool.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "vscgitPanel",
+          "title": "Git",
+          "icon": "media/git-tool.svg"
+        }
+      ]
+    },
+    "views": {
+      "vscgit": [
+        {
+          "type": "webview",
+          "id": "vscgit.commit",
+          "name": "Commit"
+        }
+      ],
+      "vscgitPanel": [
+        {
+          "type": "webview",
+          "id": "vscgit.branches",
+          "name": "Branches"
+        },
+        {
+          "type": "webview",
+          "id": "vscgit.log",
+          "name": "Log"
+        },
+        {
+          "type": "webview",
+          "id": "vscgit.changes",
+          "name": "Changes"
+        }
+      ]
+    },
+    "colors": [
+      {
+        "id": "vscgit.stagedModifiedForeground",
+        "description": "Staged files that already exist in the repository (badge S).",
+        "defaults": {
+          "dark": "#73C991",
+          "light": "#2E7D32",
+          "highContrast": "#73C991",
+          "highContrastLight": "#2E7D32"
+        }
+      },
+      {
+        "id": "vscgit.stagedAddedForeground",
+        "description": "Staged new files (badge S).",
+        "defaults": {
+          "dark": "#4FA3E0",
+          "light": "#1A66B3",
+          "highContrast": "#6FC3DF",
+          "highContrastLight": "#1A66B3"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscgit.add",
+        "title": "Add",
+        "category": "Git Tool",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vscgit.annotate",
+        "title": "Annotate with Git Blame",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.showDiff",
+        "title": "Show Diff",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.compareWithRevision",
+        "title": "Compare with Revision...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.compareWithBranch",
+        "title": "Compare with Branch or Tag...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.showHistory",
+        "title": "Show History",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.showHistoryForSelection",
+        "title": "Show History for Selection",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.showCurrentRevision",
+        "title": "Show Current Revision",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.rollback",
+        "title": "Rollback...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.showStagedVersion",
+        "title": "Show Staged Version",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.compareWithStaged",
+        "title": "Compare with Staged Version",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.compareHeadStagedLocal",
+        "title": "Compare HEAD, Staged and Local Versions",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.push",
+        "title": "Push...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.pull",
+        "title": "Pull...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.fetch",
+        "title": "Fetch",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.merge",
+        "title": "Merge...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.rebase",
+        "title": "Rebase...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.branches",
+        "title": "Branches...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.newBranch",
+        "title": "New Branch...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.newTag",
+        "title": "New Tag...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.resetHead",
+        "title": "Reset HEAD...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.stash",
+        "title": "Stash Changes...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.unstash",
+        "title": "Unstash Changes...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.manageRemotes",
+        "title": "Manage Remotes...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.clone",
+        "title": "Clone...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.openLog",
+        "title": "Show Git Log",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.openCommit",
+        "title": "Commit...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.selectRepository",
+        "title": "Select Repository...",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.revealCommit",
+        "title": "Show Commit in Log",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.tour",
+        "title": "Feature Tour",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.readme",
+        "title": "Open README",
+        "category": "Git Tool"
+      },
+      {
+        "command": "vscgit.br.checkout",
+        "title": "Checkout"
+      },
+      {
+        "command": "vscgit.br.newBranchFrom",
+        "title": "New Branch from Selected..."
+      },
+      {
+        "command": "vscgit.br.checkoutRebase",
+        "title": "Checkout and Rebase onto Current"
+      },
+      {
+        "command": "vscgit.br.compare",
+        "title": "Compare with Current"
+      },
+      {
+        "command": "vscgit.br.diffWorking",
+        "title": "Show Diff with Working Tree"
+      },
+      {
+        "command": "vscgit.br.rebaseOnto",
+        "title": "Rebase Current onto Selected"
+      },
+      {
+        "command": "vscgit.br.merge",
+        "title": "Merge into Current"
+      },
+      {
+        "command": "vscgit.br.update",
+        "title": "Update"
+      },
+      {
+        "command": "vscgit.br.push",
+        "title": "Push..."
+      },
+      {
+        "command": "vscgit.br.rename",
+        "title": "Rename..."
+      },
+      {
+        "command": "vscgit.br.delete",
+        "title": "Delete"
+      },
+      {
+        "command": "vscgit.br.favorite",
+        "title": "Mark/Unmark as Favorite"
+      },
+      {
+        "command": "vscgit.br.showLog",
+        "title": "Show in Log"
+      },
+      {
+        "command": "vscgit.br.copyName",
+        "title": "Copy Branch Name"
+      },
+      {
+        "command": "vscgit.c.copyHash",
+        "title": "Copy Revision Number"
+      },
+      {
+        "command": "vscgit.c.showChanges",
+        "title": "Show All Changes"
+      },
+      {
+        "command": "vscgit.c.compareWithLocal",
+        "title": "Compare with Local"
+      },
+      {
+        "command": "vscgit.c.compareVersions",
+        "title": "Compare Versions"
+      },
+      {
+        "command": "vscgit.c.showRepository",
+        "title": "Show Repository at Revision"
+      },
+      {
+        "command": "vscgit.c.checkout",
+        "title": "Checkout Revision"
+      },
+      {
+        "command": "vscgit.c.newBranch",
+        "title": "New Branch..."
+      },
+      {
+        "command": "vscgit.c.newTag",
+        "title": "New Tag..."
+      },
+      {
+        "command": "vscgit.c.cherryPick",
+        "title": "Cherry-Pick"
+      },
+      {
+        "command": "vscgit.c.revert",
+        "title": "Revert Commits"
+      },
+      {
+        "command": "vscgit.c.reset",
+        "title": "Reset Current Branch to Here..."
+      },
+      {
+        "command": "vscgit.c.undo",
+        "title": "Undo Commit..."
+      },
+      {
+        "command": "vscgit.c.editMessage",
+        "title": "Edit Commit Message..."
+      },
+      {
+        "command": "vscgit.c.fixup",
+        "title": "Fixup (fold staged changes into this commit)..."
+      },
+      {
+        "command": "vscgit.c.squashInto",
+        "title": "Squash Into (staged changes, edit message)..."
+      },
+      {
+        "command": "vscgit.c.interactiveRebase",
+        "title": "Interactively Rebase from Here..."
+      },
+      {
+        "command": "vscgit.c.drop",
+        "title": "Drop Commits..."
+      },
+      {
+        "command": "vscgit.c.squash",
+        "title": "Squash Commits..."
+      },
+      {
+        "command": "vscgit.c.pushUpTo",
+        "title": "Push All up to Here..."
+      },
+      {
+        "command": "vscgit.c.createPatch",
+        "title": "Create Patch..."
+      },
+      {
+        "command": "vscgit.c.goChild",
+        "title": "Go to Child Commit (Left)"
+      },
+      {
+        "command": "vscgit.c.goParent",
+        "title": "Go to Parent Commit (Right)"
+      },
+      {
+        "command": "vscgit.f.showDiff",
+        "title": "Show Diff"
+      },
+      {
+        "command": "vscgit.f.compareWithLocal",
+        "title": "Compare with Local"
+      },
+      {
+        "command": "vscgit.f.openRevision",
+        "title": "Open Repository Version"
+      },
+      {
+        "command": "vscgit.f.openFile",
+        "title": "Open Local File"
+      },
+      {
+        "command": "vscgit.f.history",
+        "title": "Show History"
+      },
+      {
+        "command": "vscgit.f.getFromRevision",
+        "title": "Get from Revision"
+      },
+      {
+        "command": "vscgit.ch.diff",
+        "title": "Show Diff"
+      },
+      {
+        "command": "vscgit.ch.open",
+        "title": "Open File"
+      },
+      {
+        "command": "vscgit.ch.stage",
+        "title": "Stage"
+      },
+      {
+        "command": "vscgit.ch.unstage",
+        "title": "Unstage"
+      },
+      {
+        "command": "vscgit.ch.rollback",
+        "title": "Rollback..."
+      },
+      {
+        "command": "vscgit.ch.delete",
+        "title": "Delete File..."
+      },
+      {
+        "command": "vscgit.ch.ignore",
+        "title": "Add to .gitignore"
+      },
+      {
+        "command": "vscgit.ch.shelve",
+        "title": "Shelve Changes..."
+      },
+      {
+        "command": "vscgit.ch.history",
+        "title": "Show History"
+      },
+      {
+        "command": "vscgit.st.apply",
+        "title": "Unshelve (Apply)"
+      },
+      {
+        "command": "vscgit.st.pop",
+        "title": "Unshelve and Remove (Pop)"
+      },
+      {
+        "command": "vscgit.st.drop",
+        "title": "Delete..."
+      },
+      {
+        "command": "vscgit.st.showChanges",
+        "title": "Show All Changes"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "vscgit.resource",
+        "label": "Git"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "submenu": "vscgit.resource",
+          "group": "z_vscgit@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "vscgit.resource",
+          "group": "z_vscgit@1",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "submenu": "vscgit.resource",
+          "group": "z_vscgit@1",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "vscgit.resource": [
+        {
+          "command": "vscgit.add",
+          "group": "1_add@1"
+        },
+        {
+          "command": "vscgit.annotate",
+          "group": "2_compare@1",
+          "when": "!explorerResourceIsFolder"
+        },
+        {
+          "command": "vscgit.showDiff",
+          "group": "2_compare@2"
+        },
+        {
+          "command": "vscgit.compareWithRevision",
+          "group": "2_compare@3"
+        },
+        {
+          "command": "vscgit.compareWithBranch",
+          "group": "2_compare@4"
+        },
+        {
+          "command": "vscgit.showHistory",
+          "group": "2_compare@5"
+        },
+        {
+          "command": "vscgit.showHistoryForSelection",
+          "group": "2_compare@6",
+          "when": "editorTextFocus && editorHasSelection"
+        },
+        {
+          "command": "vscgit.showCurrentRevision",
+          "group": "2_compare@7"
+        },
+        {
+          "command": "vscgit.rollback",
+          "group": "2_compare@8"
+        },
+        {
+          "command": "vscgit.showStagedVersion",
+          "group": "2_compare@9",
+          "when": "!explorerResourceIsFolder"
+        },
+        {
+          "command": "vscgit.compareWithStaged",
+          "group": "2_compare@10",
+          "when": "!explorerResourceIsFolder"
+        },
+        {
+          "command": "vscgit.compareHeadStagedLocal",
+          "group": "2_compare@11",
+          "when": "!explorerResourceIsFolder"
+        },
+        {
+          "command": "vscgit.push",
+          "group": "3_sync@1"
+        },
+        {
+          "command": "vscgit.pull",
+          "group": "3_sync@2"
+        },
+        {
+          "command": "vscgit.fetch",
+          "group": "3_sync@3"
+        },
+        {
+          "command": "vscgit.merge",
+          "group": "4_merge@1"
+        },
+        {
+          "command": "vscgit.rebase",
+          "group": "4_merge@2"
+        },
+        {
+          "command": "vscgit.branches",
+          "group": "5_branch@1"
+        },
+        {
+          "command": "vscgit.newBranch",
+          "group": "5_branch@2"
+        },
+        {
+          "command": "vscgit.newTag",
+          "group": "5_branch@3"
+        },
+        {
+          "command": "vscgit.resetHead",
+          "group": "5_branch@4"
+        },
+        {
+          "command": "vscgit.stash",
+          "group": "6_stash@1"
+        },
+        {
+          "command": "vscgit.unstash",
+          "group": "6_stash@2"
+        },
+        {
+          "command": "vscgit.manageRemotes",
+          "group": "7_remote@1"
+        },
+        {
+          "command": "vscgit.clone",
+          "group": "7_remote@2"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "vscgit.br.checkout",
+          "group": "1_checkout@1",
+          "when": "webviewSection == 'branch' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.newBranchFrom",
+          "group": "1_checkout@2",
+          "when": "webviewSection == 'branch'"
+        },
+        {
+          "command": "vscgit.br.checkoutRebase",
+          "group": "1_checkout@3",
+          "when": "webviewSection == 'branch' && branchKind == 'local' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.compare",
+          "group": "2_compare@1",
+          "when": "webviewSection == 'branch' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.diffWorking",
+          "group": "2_compare@2",
+          "when": "webviewSection == 'branch'"
+        },
+        {
+          "command": "vscgit.br.showLog",
+          "group": "2_compare@3",
+          "when": "webviewSection == 'branch'"
+        },
+        {
+          "command": "vscgit.br.rebaseOnto",
+          "group": "3_merge@1",
+          "when": "webviewSection == 'branch' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.merge",
+          "group": "3_merge@2",
+          "when": "webviewSection == 'branch' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.update",
+          "group": "4_sync@1",
+          "when": "webviewSection == 'branch' && (hasUpstream || branchKind == 'remote')"
+        },
+        {
+          "command": "vscgit.br.push",
+          "group": "4_sync@2",
+          "when": "webviewSection == 'branch' && branchKind == 'local'"
+        },
+        {
+          "command": "vscgit.br.rename",
+          "group": "5_edit@1",
+          "when": "webviewSection == 'branch' && branchKind == 'local'"
+        },
+        {
+          "command": "vscgit.br.delete",
+          "group": "5_edit@2",
+          "when": "webviewSection == 'branch' && !isCurrent"
+        },
+        {
+          "command": "vscgit.br.favorite",
+          "group": "5_edit@3",
+          "when": "webviewSection == 'branch'"
+        },
+        {
+          "command": "vscgit.br.copyName",
+          "group": "5_edit@4",
+          "when": "webviewSection == 'branch'"
+        },
+        {
+          "command": "vscgit.c.copyHash",
+          "group": "1_copy@1",
+          "when": "webviewSection == 'commit'"
+        },
+        {
+          "command": "vscgit.c.createPatch",
+          "group": "1_copy@2",
+          "when": "webviewSection == 'commit'"
+        },
+        {
+          "command": "vscgit.c.cherryPick",
+          "group": "1_copy@3",
+          "when": "webviewSection == 'commit'"
+        },
+        {
+          "command": "vscgit.c.checkout",
+          "group": "2_compare@1",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.showRepository",
+          "group": "2_compare@2",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.showChanges",
+          "group": "2_compare@3",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.compareWithLocal",
+          "group": "2_compare@4",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.compareVersions",
+          "group": "2_compare@5",
+          "when": "webviewSection == 'commit' && commitCount == 2"
+        },
+        {
+          "command": "vscgit.c.reset",
+          "group": "3_apply@1",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.revert",
+          "group": "3_apply@2",
+          "when": "webviewSection == 'commit'"
+        },
+        {
+          "command": "vscgit.c.undo",
+          "group": "3_apply@3",
+          "when": "webviewSection == 'commit' && isHead"
+        },
+        {
+          "command": "vscgit.c.editMessage",
+          "group": "4_rewrite@1",
+          "when": "webviewSection == 'commit' && !multi && !isMerge"
+        },
+        {
+          "command": "vscgit.c.fixup",
+          "group": "4_rewrite@2",
+          "when": "webviewSection == 'commit' && !multi && !isMerge"
+        },
+        {
+          "command": "vscgit.c.squashInto",
+          "group": "4_rewrite@3",
+          "when": "webviewSection == 'commit' && !multi && !isMerge"
+        },
+        {
+          "command": "vscgit.c.interactiveRebase",
+          "group": "4_rewrite@6",
+          "when": "webviewSection == 'commit' && !multi && !isMerge"
+        },
+        {
+          "command": "vscgit.c.drop",
+          "group": "4_rewrite@4",
+          "when": "webviewSection == 'commit'"
+        },
+        {
+          "command": "vscgit.c.squash",
+          "group": "4_rewrite@5",
+          "when": "webviewSection == 'commit' && multi"
+        },
+        {
+          "command": "vscgit.c.pushUpTo",
+          "group": "4_rewrite@7",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.newBranch",
+          "group": "5_ref@1",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.newTag",
+          "group": "5_ref@2",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.goChild",
+          "group": "6_nav@1",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.c.goParent",
+          "group": "6_nav@2",
+          "when": "webviewSection == 'commit' && !multi"
+        },
+        {
+          "command": "vscgit.f.showDiff",
+          "group": "1_diff@1",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.f.compareWithLocal",
+          "group": "1_diff@2",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.f.openRevision",
+          "group": "2_open@1",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.f.openFile",
+          "group": "2_open@2",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.f.history",
+          "group": "3_history@1",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.f.getFromRevision",
+          "group": "4_apply@1",
+          "when": "webviewSection == 'commitFile'"
+        },
+        {
+          "command": "vscgit.ch.diff",
+          "group": "1_diff@1",
+          "when": "webviewSection == 'change'"
+        },
+        {
+          "command": "vscgit.ch.open",
+          "group": "1_diff@2",
+          "when": "webviewSection == 'change'"
+        },
+        {
+          "command": "vscgit.ch.stage",
+          "group": "2_stage@1",
+          "when": "webviewSection == 'change' && changeGroup != 'staged'"
+        },
+        {
+          "command": "vscgit.ch.unstage",
+          "group": "2_stage@2",
+          "when": "webviewSection == 'change' && changeGroup == 'staged'"
+        },
+        {
+          "command": "vscgit.ch.rollback",
+          "group": "3_rollback@1",
+          "when": "webviewSection == 'change' && changeGroup != 'untracked'"
+        },
+        {
+          "command": "vscgit.ch.shelve",
+          "group": "3_rollback@2",
+          "when": "webviewSection == 'change'"
+        },
+        {
+          "command": "vscgit.ch.delete",
+          "group": "3_rollback@3",
+          "when": "webviewSection == 'change' && changeGroup == 'untracked'"
+        },
+        {
+          "command": "vscgit.ch.ignore",
+          "group": "4_misc@1",
+          "when": "webviewSection == 'change' && changeGroup == 'untracked'"
+        },
+        {
+          "command": "vscgit.ch.history",
+          "group": "4_misc@2",
+          "when": "webviewSection == 'change' && changeGroup != 'untracked'"
+        },
+        {
+          "command": "vscgit.st.apply",
+          "group": "1_apply@1",
+          "when": "webviewSection == 'stash'"
+        },
+        {
+          "command": "vscgit.st.pop",
+          "group": "1_apply@2",
+          "when": "webviewSection == 'stash'"
+        },
+        {
+          "command": "vscgit.st.showChanges",
+          "group": "2_show@1",
+          "when": "webviewSection == 'stash'"
+        },
+        {
+          "command": "vscgit.st.drop",
+          "group": "3_drop@1",
+          "when": "webviewSection == 'stash'"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "vscgit.revealCommit",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.showHistoryForSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "vscgit.br.checkout",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.newBranchFrom",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.checkoutRebase",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.compare",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.diffWorking",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.rebaseOnto",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.merge",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.update",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.push",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.rename",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.delete",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.favorite",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.showLog",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.br.copyName",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.copyHash",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.showChanges",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.compareWithLocal",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.checkout",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.newBranch",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.newTag",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.cherryPick",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.revert",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.reset",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.undo",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.editMessage",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.createPatch",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.compareVersions",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.showRepository",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.fixup",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.squashInto",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.interactiveRebase",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.drop",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.squash",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.pushUpTo",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.goChild",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.c.goParent",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.showDiff",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.compareWithLocal",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.openRevision",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.openFile",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.history",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.f.getFromRevision",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.diff",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.open",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.stage",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.unstage",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.rollback",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.delete",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.ignore",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.shelve",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.ch.history",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.st.apply",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.st.pop",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.st.drop",
+          "when": "false"
+        },
+        {
+          "command": "vscgit.st.showChanges",
+          "when": "false"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "tour",
+        "title": "Git Tool: Feature Tour",
+        "description": "Where to find the Git views and how to use them.",
+        "steps": [
+          {
+            "id": "log",
+            "title": "Branches, Log and Changes",
+            "description": "Three views in the bottom panel, tab GIT (Alt+9). Double-click a branch, select one or several commits (Ctrl/Shift+click) and right-click for cherry-pick, revert, squash, drop, compare and more.\n[Open the Log](command:vscgit.openLog)",
+            "media": {
+              "image": "assets/log.gif",
+              "altText": "Branches, Log and Changes views"
+            }
+          },
+          {
+            "id": "menu",
+            "title": "Git menu on files and folders",
+            "description": "Right-click a file or folder in the Explorer, the editor or an editor tab and open Git: blame, diff, compare with revision/branch/staged, history, rollback, push, pull, branches, stash and more. Staged files get an S badge: green = changed, blue = new.",
+            "media": {
+              "image": "assets/explorer.gif",
+              "altText": "Git right-click menu"
+            }
+          },
+          {
+            "id": "commit",
+            "title": "Commit and Shelf",
+            "description": "Activity bar, Git Tool icon (Alt+0): stage, unstage, rollback, amend, message history, Commit and Push. The Shelf tab lists your stashes.\n[Open Commit](command:vscgit.openCommit)",
+            "media": {
+              "image": "assets/commit.gif",
+              "altText": "Commit and Shelf"
+            }
+          },
+          {
+            "id": "rebase",
+            "title": "Interactive rebase",
+            "description": "Log, right-click a commit, Interactively Rebase from Here: pick, reword, edit, squash, fixup or drop, and reorder with drag and drop or Alt+Up/Down.\n[Open the README](command:vscgit.readme)",
+            "media": {
+              "image": "assets/rebase.gif",
+              "altText": "Interactive rebase editor"
+            }
+          }
+        ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vscgit.openLog",
+        "key": "alt+9"
+      },
+      {
+        "command": "vscgit.openCommit",
+        "key": "alt+0"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\" && tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test test/*.test.js",
+    "package": "npm test && vsce package --no-dependencies --skip-license"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.145.0",
+    "@vscode/vsce": "^4.1.0",
+    "gifenc": "^1.0.3",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "minimatch": "^11.0.8"
+    }
+  },
+  "allowScripts": {
+    "@vscode/vsce-sign": false
+  }
+}
