@@ -2,7 +2,7 @@
 'use strict';
 
 const GRAPH_COLORS = ['#4fa3e0', '#e5a03a', '#7ac46b', '#c678dd', '#e06c75', '#56b6c2', '#d19a66', '#98c379', '#61afef', '#be5046'];
-const LANE_W = 12;
+const LANE_W = 14;
 const ROW_H = 22;
 
 /**
@@ -84,11 +84,10 @@ function graphWidth(rows) {
   return rows.reduce((width, row) => Math.max(width, row.width), 1);
 }
 
-function graphMetrics(rows, availableWidth) {
+// Lanes keep a fixed spacing so branches stay visually separate; the Graph column clips and can be resized.
+function graphMetrics(rows) {
   const lanes = graphWidth(rows);
-  const budget = Math.max(40, Math.min(240, availableWidth * 0.3));
-  const spacing = Math.min(LANE_W, (budget - 8) / lanes);
-  return { lanes, spacing, pixels: 8 + lanes * spacing };
+  return { lanes, spacing: LANE_W, pixels: 8 + lanes * LANE_W };
 }
 
 function drawGraphRow(row, width, isHead, spacing = LANE_W) {
@@ -108,7 +107,7 @@ function drawGraphRow(row, width, isHead, spacing = LANE_W) {
     line.setAttribute('d', x1 === x2 ? `M${x1},${y1} L${x2},${y2}` : `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`);
     line.setAttribute('fill', 'none');
     line.setAttribute('stroke', GRAPH_COLORS[s.color % GRAPH_COLORS.length]);
-    line.setAttribute('stroke-width', '1.6');
+    line.setAttribute('stroke-width', '2');
     if ((row.gapBefore && y1 === 0) || (row.gapAfter && y2 === ROW_H)) line.setAttribute('stroke-dasharray', '2 2');
     svg.append(line);
     // Open arrowheads mean the edge continues across omitted repository rows.
@@ -124,7 +123,7 @@ function drawGraphRow(row, width, isHead, spacing = LANE_W) {
   const dot = document.createElementNS(NS, 'circle');
   dot.setAttribute('cx', laneX(row.col, spacing));
   dot.setAttribute('cy', mid);
-  dot.setAttribute('r', isHead ? '4.5' : '3.5');
+  dot.setAttribute('r', isHead ? '5' : '4');
   const col = GRAPH_COLORS[row.color % GRAPH_COLORS.length];
   if (isHead) {
     dot.setAttribute('fill', 'var(--vscode-editor-background)');

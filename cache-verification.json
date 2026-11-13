@@ -1,0 +1,12 @@
+{
+  "VerifiedAt": "2026-11-13T16:31:17.0552643+01:00",
+  "InitialBuild": "55 repositories; 55 Git history loads; 85316ms",
+  "FinalReload": [
+    "[History cache] Restored 1505 commits from disk in 997ms before checking Git.",
+    "[History cache] 55 repositories, 0 Git history loads, 1116ms. Unchanged histories remain on disk across restarts.",
+    "[History cache] 55 repositories, 0 Git history loads, 11476ms. Unchanged histories remain on disk across restarts."
+  ],
+  "FullTests": "44/44 passed",
+  "InstalledAndReloaded": true,
+  "LogFile": "C:\\Users\\amano\\AppData\\Roaming\\Code\\logs\\20261113T093757\\window1\\exthost\\output_logging_20261113T163022\\1-Git Tool.log"
+}

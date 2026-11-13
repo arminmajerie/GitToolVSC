@@ -48,18 +48,30 @@ body.page-log { background: var(--vscode-panel-background, var(--vscode-editor-b
 .menu-apply { margin-top: 8px; width: 100%; }
 .center { position: relative; }
 .log-loading { position: absolute; bottom: 4px; right: 12px; z-index: 1; padding: 4px 8px; pointer-events: none; background: var(--vscode-editor-background, #252526); color: var(--vscode-descriptionForeground, #aaa); }
-.graph-legend { padding: 3px 8px; font-size: 11px; color: var(--vscode-descriptionForeground, #aaa); }
-.c-graph svg[role=button] { cursor: pointer; }
 
-.commits { flex: 1; overflow: auto; outline: none; --graph-w: 40px; container-type: inline-size; position: relative; overflow-anchor: none; }
-.commit-row {
-  display: grid; grid-template-columns: var(--graph-w) minmax(140px, 3fr) minmax(70px, 1fr) minmax(112px, 0.9fr); align-items: center;
-  height: 22px; padding-right: 6px; cursor: default; user-select: none; white-space: nowrap;
+.center { --graph-w: 60px; --repo-w: 0px; --author-w: 150px; --date-w: 125px; }
+.commits { flex: 1; overflow: auto; outline: none; position: relative; overflow-anchor: none; }
+.commit-row, .commit-header {
+  display: grid; grid-template-columns: var(--graph-w) var(--repo-w) minmax(80px, 1fr) var(--author-w) var(--date-w); align-items: center;
+  padding-right: 6px; white-space: nowrap;
 }
-@container (max-width: 560px) {
-  .commit-row { grid-template-columns: var(--graph-w) minmax(100px, 1fr) 112px; }
-  .c-author { display: none; }
+.commit-row { height: 22px; cursor: default; user-select: none; }
+.commit-header {
+  position: sticky; top: 0; z-index: 2; height: 22px; font-size: 11px; user-select: none;
+  color: var(--vscode-descriptionForeground, #aaa); background: var(--vscode-sideBar-background, var(--vscode-editor-background, #1e1e1e));
+  border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, #444));
 }
+.col-head { position: relative; height: 100%; display: flex; align-items: center; overflow: hidden; padding-left: 8px; }
+.col-head.c-graph { padding-left: 6px; }
+.col-resize { position: absolute; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 1; }
+.col-resize.right { right: 0; border-right: 1px solid var(--vscode-panel-border, #555); }
+.col-resize.left { left: 0; border-left: 1px solid var(--vscode-panel-border, #555); }
+.col-resize:hover, body.resizing-col .col-resize { background: var(--vscode-sash-hoverBorder, #0078d4); }
+body.resizing-col, body.resizing-col * { cursor: col-resize !important; user-select: none; }
+.center:not(.multi-repo) .c-repo { visibility: hidden; padding: 0; }
+.c-repo { overflow: hidden; text-overflow: ellipsis; padding-left: 8px; color: var(--vscode-descriptionForeground); }
+.center.multi-repo .commit-row .c-repo { cursor: pointer; }
+.center.multi-repo .commit-row .c-repo:hover { text-decoration: underline; }
 .commit-row:hover { background: var(--vscode-list-hoverBackground); }
 .commit-row.selected { background: var(--vscode-list-inactiveSelectionBackground); }
 .commits:focus .commit-row.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground, inherit); }
@@ -67,9 +79,23 @@ body.page-log { background: var(--vscode-panel-background, var(--vscode-editor-b
 .commit-row.mine .subject, .commit-row.mine .c-author { font-weight: 600; }
 .c-graph { overflow: hidden; height: 22px; }
 .c-graph .graph { display: block; }
-.c-subject { display: flex; align-items: center; gap: 8px; overflow: hidden; }
-.c-subject .subject { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 60px; }
-.c-subject .refs { display: flex; gap: 4px; flex: 0 4 auto; min-width: 0; overflow: hidden; justify-content: flex-end; }
+.c-subject { display: flex; align-items: center; gap: 6px; overflow: hidden; padding-left: 8px; }
+.c-subject .subject { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 40px; }
+.c-subject .refs { display: flex; gap: 4px; flex: 0 4 auto; min-width: 0; overflow: hidden; }
+.c-subject .refs:empty { display: none; }
+.commit-card {
+  position: fixed; z-index: 20; max-width: 460px; min-width: 260px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px;
+  background: var(--vscode-editorHoverWidget-background, #252526); color: var(--vscode-editorHoverWidget-foreground, inherit);
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545); border-radius: 4px; box-shadow: 0 2px 8px var(--vscode-widget-shadow, #0008);
+  white-space: normal; font-size: 12px;
+}
+.commit-card .dim { color: var(--vscode-descriptionForeground, #aaa); }
+.card-author { font-weight: 600; color: var(--vscode-textLink-foreground, #4fa3e0); }
+.card-subject { font-weight: 600; }
+.card-stats { color: var(--vscode-descriptionForeground, #aaa); }
+.card-refs { display: flex; flex-wrap: wrap; gap: 4px; }
+.card-foot { display: flex; align-items: center; gap: 10px; }
+.card-copy { font-family: var(--vscode-editor-font-family, monospace); padding: 0 6px; cursor: pointer; }
 .ref { flex: 0 1 auto; min-width: 24px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .c-author, .c-date { overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
 .c-date { color: var(--vscode-descriptionForeground); }

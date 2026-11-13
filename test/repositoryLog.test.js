@@ -38,15 +38,15 @@ test('a parent with a newer timestamp still follows its child in the combined gr
   assert.deepEqual(mergeRepositoryLogs([{ repo: '/root', commits: [commit('child', ['parent'], 100), commit('parent', [], 300)] }], 1).map(c => c.h), ['child']);
 });
 
-test('all repository graph lanes remain visible beyond twenty independent histories', () => {
+test('graph lanes keep a fixed readable spacing beyond twenty independent histories', () => {
   const tips = Array.from({ length: 30 }, (_, i) => ({ h: `tip${i}`, p: [`parent${i}`] }));
   const parents = tips.map((_, i) => ({ h: `parent${i}`, p: [] }));
   const graph = computeGraph([...tips, ...parents]);
   assert.equal(graphWidth(graph), 30);
   assert.ok(graph.every(row => row.col < graphWidth(graph)));
-  const metrics = graphMetrics(graph, 600);
-  assert.ok(metrics.pixels <= 180, 'graph must leave space for commit messages');
-  assert.ok(graph.every(row => 8 + row.col * metrics.spacing < metrics.pixels), 'every lane remains inside the graph viewport');
+  const metrics = graphMetrics(graph);
+  assert.equal(metrics.spacing, 14, 'lanes are never squeezed together');
+  assert.ok(graph.every(row => 8 + row.col * metrics.spacing < metrics.pixels), 'every lane lies inside the drawn graph');
 });
 
 test('compact histories reuse space without inventing edges between unrelated repositories', () => {

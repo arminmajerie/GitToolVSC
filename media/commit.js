@@ -250,14 +250,21 @@ function renderCommitTab() {
   if (msg.value !== S.message) msg.value = S.message;
   el.commitBtn = h('button', { class: 'primary', onClick: () => commit(false) });
   el.pushBtn = h('button', { class: 'secondary', text: 'Commit&Push', onClick: () => commit(true) });
-  const push = h('button', { class: 'secondary push-icon', title: 'Push', onClick: () => vscode.postMessage({ type: 'pushChecked' }) }, h('img', { src: window.vscgitAssets.push, alt: 'Push' }));
-  const forcePush = h('button', { class: 'secondary push-icon', title: 'Force push', onClick: () => vscode.postMessage({ type: 'pushChecked', force: true }) }, h('img', { src: window.vscgitAssets.forcePush, alt: 'Force push' }));
+  const checkedRepos = repositories().filter(r => r.checked !== false && r.sync);
+  const ahead = checkedRepos.filter(r => r.sync.ahead > 0);
+  const diverged = ahead.filter(r => r.sync.behind > 0);
+  const syncText = ahead.length ? `\u2191${ahead.reduce((n, r) => n + r.sync.ahead, 0)}${diverged.length ? ` \u2193${diverged.reduce((n, r) => n + r.sync.behind, 0)} diverged` : ''}` : '';
+  const syncTitle = ahead.length
+    ? ahead.map(r => `${r.repoName}: ${r.sync.ahead} to push${r.sync.behind ? `, remote has ${r.sync.behind} other commit(s) \u2192 force push needed` : ''}${r.sync.upstream ? '' : ' (no remote branch yet)'}`).join('\n')
+    : 'Nothing to push in the checked repositories';
+  const push = h('button', { class: 'secondary push-icon', title: `Push\n${syncTitle}`, onClick: () => vscode.postMessage({ type: 'pushChecked' }) }, h('img', { src: window.vscgitAssets.push, alt: 'Push' }));
+  const forcePush = h('button', { class: 'secondary push-icon' + (diverged.length ? ' needed' : ''), title: `Force push (git push --force)\n${syncTitle}`, onClick: () => vscode.postMessage({ type: 'pushChecked', force: true }) }, h('img', { src: window.vscgitAssets.forcePush, alt: 'Force push' }));
   const commitAll = h('button', { class: 'secondary', text: 'Commit', onClick: () => vscode.postMessage({ type: 'commitChecked', message: S.message, amend: S.amend, push: false }) });
   const commitPushAll = h('button', { class: 'secondary', text: 'Commit&Push', onClick: () => vscode.postMessage({ type: 'commitChecked', message: S.message, amend: S.amend, push: true }) });
   const box = h('div', { class: 'commit-box' },
     h('div', { class: 'row' }, h('label', { for: 'amend', class: 'check' }, amend, ' Amend'), button('history', 'Commit Message History', () => repoMessage('history'))),
     msg,
-    h('div', { class: 'row' }, commitAll, commitPushAll, h('span', { class: 'push-actions' }), push, forcePush));
+    h('div', { class: 'row' }, commitAll, commitPushAll, h('span', { class: 'push-actions' + (diverged.length ? ' diverged' : ''), title: syncTitle, text: syncText }), push, forcePush));
   el.body.append(tb, tree, box);
   updateCommitButton();
 }

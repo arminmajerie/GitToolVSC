@@ -32,8 +32,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('.repository-group').filter({ hasText: 'ib-server' }).first().click();
     await page.getByTitle('Unstage folder', { exact: true }).click();
     assert.deepEqual(await page.evaluate(() => window.sent.at(-1)), { type: 'unstage', repo: '/work/ib-server', paths: ['crates/core.rs'] });
-    await page.getByTitle('Push', { exact: true }).click();
+    await page.getByRole('button', { name: 'Push', exact: true }).click();
     assert.deepEqual(await page.evaluate(() => window.sent.at(-1)), { type: 'pushChecked' });
+    await page.evaluate(() => {
+      const repo = (name, sync) => ({ repo: '/work/' + name, repoName: name, branch: 'main', checked: true, staged: [], unstaged: [], untracked: [], conflicts: [], sync });
+      window.dispatchEvent(new MessageEvent('message', { data: { type: 'status', repo: '/work/parent', repositories: [
+        repo('parent', { ahead: 0, behind: 0, upstream: true }), repo('squashed', { ahead: 3, behind: 5, upstream: true })
+      ] } }));
+    });
+    assert.equal(await page.getByRole('button', { name: 'Force push', exact: true }).count(), 1, 'force push stays available when nothing is left to commit');
+    assert.ok(await page.getByRole('button', { name: 'Force push', exact: true }).evaluate(b => b.classList.contains('needed')), 'diverged history highlights force push');
+    assert.match(await page.locator('.push-actions').textContent(), /↑3 ↓5 diverged/);
+    await page.getByRole('button', { name: 'Force push', exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => window.sent.at(-1)), { type: 'pushChecked', force: true });
     assert.deepEqual(errors, []);
     await page.screenshot({ path: path.join(__dirname, '../commit-ui-verified.png'), fullPage: true });
     console.log('PASS: aggregate repository groups, explicit folder owner, checked push, no duplicate controls, no JavaScript errors');

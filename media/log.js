@@ -23,6 +23,8 @@ const S = {
   details: null,
   containing: null,
   error: '',
+  multiRepo: false,
+  stats: new Map(),
   ui: {
     showBranches: true,
     showDetails: true,
@@ -160,8 +162,8 @@ function build() {
   el.split1 = h('div', { class: 'splitter' });
   el.filterbar = h('div', { class: 'filterbar' });
   el.commits = h('div', { class: 'commits', tabindex: '0' });
-  el.legend = h('div', { class: 'graph-legend', text: '● Commit   ─ Parent history   ↕ Continues past other repositories · Click a graph to focus its repository' });
-  el.center = h('div', { class: 'center' }, el.filterbar, el.legend, el.commits);
+  el.header = buildHeader();
+  el.center = h('div', { class: 'center' }, el.filterbar, el.commits);
   el.split2 = h('div', { class: 'splitter' });
   el.detailsPane = h('div', { class: 'details-pane' });
   app.append(h('div', { class: 'log-root' }, el.branchesStrip, el.branchesPane, el.split1, el.center, el.split2, el.detailsPane));
@@ -473,14 +475,15 @@ function renderCommits(keepScroll, select) {
     box.append(h('div', { class: 'empty', text: S.repo ? 'No commits match the filter.' : 'No repository selected.' }));
     return;
   }
-  V.metrics = graphMetrics(S.graph, box.clientWidth || 800);
+  V.metrics = graphMetrics(S.graph);
   V.maxW = S.showGraph ? V.metrics.lanes : 1;
   V.top = h('div', { class: 'commit-spacer' });
   V.rows = h('div', { class: 'commit-window' });
   V.bottom = h('div', { class: 'commit-spacer' });
-  box.append(V.top, V.rows, V.bottom);
+  box.append(el.header, V.top, V.rows, V.bottom);
   if (S.hasMore) box.append(h('div', { class: 'more' }, h('button', { class: 'link', text: 'Load more commits', onClick: () => vscode.postMessage({ type: 'loadMore' }) })));
-  box.style.setProperty('--graph-w', (S.showGraph ? V.metrics.pixels : 18) + 'px');
+  S.multiRepo = new Set(S.commits.map(c => c.repo || '')).size > 1;
+  applyColumns();
   V.top.style.height = '0px';
   V.bottom.style.height = S.commits.length * ROW_H + 'px';
   box.scrollTop = keepScroll ? scroll : 0;
@@ -489,6 +492,144 @@ function renderCommits(keepScroll, select) {
     const i = S.commits.findIndex(c => c.h === select);
     if (i >= 0) selectIndex(i, false, false, true);
   }
+}
+
+// ---------------- columns ----------------
+
+const COLUMNS = [
+  { key: 'graph', label: 'Graph', edge: 'right', min: 24 },
+  { key: 'repo', label: 'Repository', edge: 'right', min: 40 },
+  { key: 'subject', label: 'Description' },
+  { key: 'author', label: 'Author', edge: 'left', min: 40 },
+  { key: 'date', label: 'Date', edge: 'left', min: 60 }
+];
+
+function columnWidths() {
+  return Object.assign({ graph: 0, repo: 110, author: 150, date: 125 }, S.ui.cols || {});
+}
+
+function graphAutoWidth() {
+  if (!S.showGraph || !V.metrics) return 18;
+  return Math.min(V.metrics.pixels + 4, Math.max(60, (el.commits.clientWidth || 800) * 0.4));
+}
+
+function applyColumns() {
+  const w = columnWidths();
+  const target = el.center;
+  target.classList.toggle('multi-repo', !!S.multiRepo);
+  target.style.setProperty('--graph-w', (w.graph || graphAutoWidth()) + 'px');
+  target.style.setProperty('--repo-w', (S.multiRepo ? w.repo : 0) + 'px');
+  target.style.setProperty('--author-w', w.author + 'px');
+  target.style.setProperty('--date-w', w.date + 'px');
+}
+
+function buildHeader() {
+  const header = h('div', { class: 'commit-header' });
+  for (const col of COLUMNS) {
+    const cell = h('div', { class: 'col-head c-' + col.key, text: col.label });
+    if (col.edge) {
+      const handle = h('div', { class: 'col-resize ' + col.edge, title: 'Drag to resize · double-click to reset' });
+      handle.addEventListener('mousedown', e => startColumnResize(e, col));
+      handle.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        const cols = columnWidths();
+        delete cols[col.key];
+        S.ui.cols = col.key === 'graph' ? { ...cols, graph: 0 } : cols;
+        applyColumns(); saveUi();
+      });
+      cell.append(handle);
+    }
+    header.append(cell);
+  }
+  return header;
+}
+
+function startColumnResize(e, col) {
+  e.preventDefault();
+  e.stopPropagation();
+  const startX = e.clientX;
+  const cell = e.target.parentElement;
+  const startW = cell.getBoundingClientRect().width;
+  document.body.classList.add('resizing-col');
+  const move = ev => {
+    const delta = (ev.clientX - startX) * (col.edge === 'left' ? -1 : 1);
+    S.ui.cols = { ...columnWidths(), [col.key]: Math.round(Math.max(col.min, startW + delta)) };
+    applyColumns();
+  };
+  const up = () => {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    document.body.classList.remove('resizing-col');
+    saveUi();
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+// ---------------- commit hover card ----------------
+
+const CARD = { node: null, showTimer: 0, hideTimer: 0, index: -1, x: 0, y: 0 };
+
+function relativeTime(seconds) {
+  const diff = Date.now() / 1000 - seconds;
+  const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
+  for (const [unit, size] of units) {
+    const n = Math.floor(diff / size);
+    if (n >= 1) return `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+  }
+  return 'just now';
+}
+
+function scheduleCard(i, x, y) {
+  clearTimeout(CARD.hideTimer);
+  if (CARD.node && CARD.index === i) return;
+  clearTimeout(CARD.showTimer);
+  CARD.x = x; CARD.y = y;
+  CARD.showTimer = setTimeout(() => showCard(i), CARD.node ? 80 : 350);
+}
+
+function scheduleHideCard() {
+  clearTimeout(CARD.showTimer);
+  clearTimeout(CARD.hideTimer);
+  CARD.hideTimer = setTimeout(hideCard, 200);
+}
+
+function hideCard() {
+  clearTimeout(CARD.showTimer);
+  if (CARD.node) CARD.node.remove();
+  CARD.node = null;
+  CARD.index = -1;
+}
+
+function showCard(i) {
+  const c = S.commits[i];
+  if (!c) return;
+  hideCard();
+  const stats = S.stats.get(c.h);
+  if (stats === undefined) vscode.postMessage({ type: 'commitStats', hash: c.h });
+  const copy = h('button', { class: 'card-copy', title: 'Copy full hash', text: c.h.slice(0, 8) });
+  copy.addEventListener('click', e => {
+    e.stopPropagation();
+    if (navigator.clipboard) navigator.clipboard.writeText(c.h);
+    copy.textContent = 'Copied';
+  });
+  const refs = refChips(c);
+  const node = h('div', { class: 'commit-card', role: 'tooltip' },
+    h('div', { class: 'card-head' }, h('span', { class: 'card-author', text: c.an }), h('span', { class: 'dim', text: ` <${c.ae}>` })),
+    h('div', { class: 'dim', text: `${relativeTime(c.at)} (${new Date(c.at * 1000).toLocaleString()})` }),
+    h('div', { class: 'card-subject', text: c.s }),
+    h('div', { class: 'card-stats', text: stats || 'Counting changes\u2026' }),
+    refs.length ? h('div', { class: 'card-refs' }, refs) : null,
+    h('div', { class: 'card-foot' }, copy, c.repo && S.multiRepo ? h('span', { class: 'dim', text: baseName(c.repo) }) : null,
+      c.p.length > 1 ? h('span', { class: 'dim', text: `merge of ${c.p.length} parents` }) : null));
+  node.addEventListener('mouseenter', () => clearTimeout(CARD.hideTimer));
+  node.addEventListener('mouseleave', scheduleHideCard);
+  document.body.append(node);
+  const r = node.getBoundingClientRect();
+  node.style.left = Math.max(4, Math.min(CARD.x + 14, window.innerWidth - r.width - 8)) + 'px';
+  node.style.top = (CARD.y + 16 + r.height > window.innerHeight ? Math.max(4, CARD.y - r.height - 10) : CARD.y + 16) + 'px';
+  CARD.node = node;
+  CARD.index = i;
 }
 
 // Only the rows near the viewport exist in the DOM; large histories stay responsive.
@@ -531,45 +672,43 @@ function commitRow(c, i, selected) {
     'data-i': i
   });
   const g = S.showGraph ? drawGraphRow(S.graph[i], V.maxW, c.h === S.head, V.metrics.spacing) : drawGraphRow({ col: 0, color: 0, segs: [] }, 1, c.h === S.head);
-  if (c.repo) {
-    g.setAttribute('role', 'button');
-    g.setAttribute('tabindex', '0');
-    g.setAttribute('aria-label', `Focus ${baseName(c.repo)} history`);
-    g.dataset.repo = c.repo;
-    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = `${baseName(c.repo)} · ${c.h.slice(0, 8)}\nCircle: commit. Lines: parent history. Arrows: history continues past other repository rows.\nClick to focus this repository; clear Paths to restore all repositories.`;
-    g.append(title);
-  }
+  const repoLabel = c.repo ? baseName(c.repo) + ((c.repositories || []).length > 1 ? ` +${c.repositories.length - 1}` : '') : '';
   row.append(
     h('div', { class: 'c-graph' }, g),
-    h('div', { class: 'c-subject', title: c.s },
-      ...(c.repo ? [h('span', { class: 'dim', title: (c.repositories || [c.repo]).join('\n'), text: baseName(c.repo) + ((c.repositories || []).length > 1 ? ` +${c.repositories.length - 1}` : '') + '  ' })] : []),
-      h('span', { class: 'subject', text: c.s }), h('span', { class: 'refs' }, refChips(c))),
+    h('div', { class: 'c-repo', title: c.repo ? `${(c.repositories || [c.repo]).join('\n')}\nClick to show only this repository` : '', text: repoLabel }),
+    h('div', { class: 'c-subject', title: c.s }, h('span', { class: 'refs' }, refChips(c)), h('span', { class: 'subject', text: c.s })),
     h('div', { class: 'c-author', title: `${c.an} <${c.ae}>`, text: c.an }),
     h('div', { class: 'c-date', title: new Date(c.at * 1000).toLocaleString(), text: fmtDate(c.at) })
   );
   return row;
 }
 
+function openCommitAt(i) {
+  const c = S.commits[i];
+  if (c) vscode.postMessage({ type: 'openCommit', hash: c.h });
+}
+
 let rowsBound = false;
 function bindCommitEvents() {
   if (rowsBound) return;
   rowsBound = true;
-  el.commits.addEventListener('scroll', scheduleWindow, { passive: true });
-  new ResizeObserver(scheduleWindow).observe(el.commits);
-  const focusGraph = (e) => {
-    const g = e.target.closest('svg.graph[data-repo]');
-    if (!g) return false;
-    e.stopPropagation();
-    vscode.postMessage({ type: 'focusRepository', repo: g.dataset.repo });
-    return true;
-  };
-  el.commits.addEventListener('click', focusGraph);
-  el.commits.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('svg.graph[data-repo]')) { e.preventDefault(); focusGraph(e); }
-  }, true);
+  el.commits.addEventListener('scroll', () => { scheduleWindow(); hideCard(); }, { passive: true });
+  new ResizeObserver(() => { scheduleWindow(); if (!columnWidths().graph) applyColumns(); }).observe(el.commits);
+  el.commits.addEventListener('click', (e) => {
+    const cell = e.target.closest('.c-repo');
+    const row = e.target.closest('.commit-row');
+    if (!cell || !row || !S.multiRepo) return;
+    const c = S.commits[Number(row.dataset.i)];
+    if (c && c.repo) vscode.postMessage({ type: 'focusRepository', repo: c.repo });
+  });
+  el.commits.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest('.c-graph');
+    const row = cell && cell.closest('.commit-row');
+    if (row) scheduleCard(Number(row.dataset.i), e.clientX, e.clientY);
+    else if (CARD.node || CARD.showTimer) scheduleHideCard();
+  });
+  el.commits.addEventListener('mouseleave', scheduleHideCard);
   el.commits.addEventListener('mousedown', (e) => {
-    if (e.target.closest('svg.graph[data-repo]')) return;
     const row = e.target.closest('.commit-row');
     if (!row) return;
     const i = Number(row.dataset.i);
@@ -581,6 +720,7 @@ function bindCommitEvents() {
     selectIndex(i, e.ctrlKey || e.metaKey, e.shiftKey, false);
   });
   el.commits.addEventListener('contextmenu', (e) => {
+    hideCard();
     const row = e.target.closest('.commit-row');
     if (!row) return;
     const c = S.commits[Number(row.dataset.i)];
@@ -592,11 +732,15 @@ function bindCommitEvents() {
   });
   el.commits.addEventListener('dblclick', (e) => {
     const row = e.target.closest('.commit-row');
-    if (row) vscode.postMessage({ type: 'showAllChanges' });
+    if (row) openCommitAt(Number(row.dataset.i));
   });
 }
 
 function onCommitKey(e) {
+  if (e.key === 'Enter' && S.anchor >= 0) {
+    e.preventDefault();
+    return openCommitAt(S.anchor);
+  }
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     e.preventDefault();
     return navigate(e.key === 'ArrowRight' ? 1 : -1);
@@ -633,7 +777,8 @@ function selectIndex(i, toggle, range, scroll) {
   if (scroll && V.top) {
     const box = el.commits;
     const top = V.top.offsetTop + i * ROW_H;
-    if (top < box.scrollTop) box.scrollTop = top;
+    const covered = el.header.offsetHeight;
+    if (top - covered < box.scrollTop) box.scrollTop = top - covered;
     else if (top + ROW_H > box.scrollTop + box.clientHeight) box.scrollTop = top + ROW_H - box.clientHeight;
     renderWindow(false);
   }
@@ -778,7 +923,7 @@ window.addEventListener('message', (ev) => {
       S.hasMore = m.hasMore;
       S.showGraph = m.graph;
       S.graph = m.graph ? (m.graphLayout === 'lanes' ? computeGraph(m.commits) : computeRepositoryGraph(m.commits)) : [];
-      el.legend.hidden = !m.graph;
+      hideCard();
       const prev = S.selected.filter(x => m.commits.some(c => c.h === x));
       S.selected = prev;
       S.anchor = prev.length ? m.commits.findIndex(c => c.h === prev[0]) : -1;
@@ -790,6 +935,12 @@ window.addEventListener('message', (ev) => {
     case 'loaded':
       el.center?.querySelector('.log-loading')?.remove();
       break;
+    case 'commitStats': {
+      S.stats.set(m.hash, m.text);
+      const shown = CARD.node && S.commits[CARD.index];
+      if (shown && shown.h === m.hash) CARD.node.querySelector('.card-stats').textContent = m.text;
+      break;
+    }
     case 'empty':
       S.commits = [];
       if (S.part === 'commits' || S.part === 'all') renderCommits(false);

@@ -90,6 +90,24 @@ export async function showStashChanges(repo: string, ref: string): Promise<void>
 
 const MESSAGES_KEY = 'vscgit.messages';
 
+export interface SyncState { ahead: number; behind: number; upstream: boolean }
+
+/** Commits to push (ahead) and remote commits not in HEAD (behind); both > 0 means only a force push can publish. */
+export async function syncState(repo: string): Promise<SyncState> {
+  const counts = await gitTry(repo, ['rev-list', '--left-right', '--count', '@{upstream}...HEAD']);
+  if (counts !== undefined) {
+    const [behind, ahead] = counts.trim().split(/\s+/).map(Number);
+    return { ahead: ahead || 0, behind: behind || 0, upstream: true };
+  }
+  const local = await gitTry(repo, ['rev-list', '--count', 'HEAD', '--not', '--remotes']);
+  return { ahead: Number(local?.trim() || 0), behind: 0, upstream: false };
+}
+
+function describeSync(s: SyncState): string {
+  if (!s.upstream) return `${s.ahead} unpublished commit(s), no remote branch yet`;
+  return s.behind ? `${s.ahead} local / ${s.behind} remote commit(s) differ (diverged)` : `${s.ahead} commit(s) ahead`;
+}
+
 /** "Commit" activity bar view with Commit and Shelf tabs. */
 export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable {
   private view: vscode.WebviewView | undefined;
@@ -109,7 +127,7 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
   private lastStatus = '';
   private statusLoadedAt = new Map<string, number>();
   private statusCache = new Map<string, RepoTreeNode & StatusGroups & {
-    repoName: string; branch?: string; state: string; stashes: StashEntry[]; childPaths: string[]; checked: boolean;
+    repoName: string; branch?: string; state: string; stashes: StashEntry[]; childPaths: string[]; checked: boolean; sync: SyncState;
   }>();
 
   constructor() {
@@ -210,14 +228,15 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
       // Saving a working tree file cannot change branch, stashes or rebase state: only re-run status.
       const metaFresh = cached && this.dirtyRepos.has(key) && !this.metaDirtyRepos.has(key);
       this.metaDirtyRepos.delete(key);
-      const [st, branch, stashes, state] = await Promise.all([
+      const [st, branch, stashes, state, sync] = await Promise.all([
         git(node.repo, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=dirty']),
         metaFresh ? cached.branch : ops.currentBranch(node.repo),
         metaFresh ? cached.stashes : ops.stashList(node.repo).catch(() => []),
-        metaFresh ? cached.state : this.state(node.repo)
+        metaFresh ? cached.state : this.state(node.repo),
+        metaFresh ? cached.sync : syncState(node.repo)
       ]);
       const groups = groupStatus(parseStatus(st));
-      const status = { ...node, repoName: repoName(node.repo), branch, state, stashes, childPaths: tree.filter(child => samePath(child.parent ?? '', node.repo) && child.path).map(child => child.path!), checked: this.checkedRepos.has(node.repo.toLowerCase()), ...groups };
+      const status = { ...node, repoName: repoName(node.repo), branch, state, stashes, sync, childPaths: tree.filter(child => samePath(child.parent ?? '', node.repo) && child.path).map(child => child.path!), checked: this.checkedRepos.has(node.repo.toLowerCase()), ...groups };
       this.statusCache.set(key, structuredClone(status));
       this.statusLoadedAt.set(key, Date.now());
       this.dirtyRepos.delete(key);
@@ -306,7 +325,17 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
       this.batchRunning = true;
       const tree = [...this.repoTree];
       try {
-        const ordered = this.orderedCheckedRepos();
+        const ordered = await this.reposWithOutgoing(this.orderedCheckedRepos());
+        if (!ordered.length) {
+          void vscode.window.showInformationMessage('Nothing to push: every checked repository already matches its remote branch.');
+          return;
+        }
+        if (m.force) {
+          const lines = ordered.map(node => `${repoName(node.repo)}: ${describeSync(node.sync)}`);
+          const ok = await vscode.window.showWarningMessage(`Force push ${ordered.length} repositor${ordered.length === 1 ? 'y' : 'ies'}?`,
+            { modal: true, detail: `The remote branches are overwritten with your local branches (git push --force).\n\n${lines.join('\n')}` }, 'Force Push');
+          if (!ok) return;
+        }
         await this.preparePushBatch(ordered, tree);
         for (const [index, node] of ordered.entries()) {
           this.reportProgress(`Pushing ${index + 1}/${ordered.length}: ${repoName(node.repo)}`);
@@ -390,6 +419,12 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
   private orderedCheckedRepos(): RepoTreeNode[] {
     const order = dependencyOrder(this.repoTree, [...this.checkedRepos]);
     return order.map(repo => this.repoTree.find(r => samePath(r.repo, repo))!).filter(Boolean);
+  }
+
+  /** Repositories whose HEAD has commits the remote branch does not (ahead or diverged after rewriting history). */
+  private async reposWithOutgoing(nodes: RepoTreeNode[]): Promise<(RepoTreeNode & { sync: SyncState })[]> {
+    const states = await mapBounded(nodes, 4, async node => ({ ...node, sync: await syncState(node.repo) }));
+    return states.filter(node => node.sync.ahead > 0);
   }
 
   private async preparePushBatch(ordered: RepoTreeNode[], tree: RepoTreeNode[]): Promise<void> {

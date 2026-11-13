@@ -228,6 +228,25 @@ export class LogController implements vscode.Disposable {
         if (d) await openChanges(this.detailRepo ?? repo, `${short(d.left)} \u2194 ${short(d.right)}`, d.files, d.left, d.right);
         break;
       }
+      case 'openCommit': {
+        const commit = this.commits.find(c => c.h === m.hash) as RepositoryCommit | undefined;
+        if (!commit) break;
+        const owner = commit.repo ?? repo;
+        const left = commit.p[0] ?? EMPTY;
+        const files = await commitChanges(owner, commit.h, commit.p);
+        if (files.length === 1) await diffFile(owner, files[0], left, commit.h);
+        else await openChanges(owner, `Changes in ${short(commit.h)}`, files, left, commit.h);
+        break;
+      }
+      case 'commitStats': {
+        const commit = this.commits.find(c => c.h === m.hash) as RepositoryCommit | undefined;
+        if (!commit) break;
+        const owner = commit.repo ?? repo;
+        const args = commit.p.length ? ['diff', '--shortstat', commit.p[0], commit.h] : ['show', '--shortstat', '--format=', commit.h];
+        const out = await this.history.read(owner, args, async () => await gitTry(owner, args) ?? '');
+        void webview.postMessage({ type: 'commitStats', hash: commit.h, text: out.trim() || 'No file changes' });
+        break;
+      }
       case 'text':
         this.filter.text = String(m.text ?? '').trim();
         this.filter.regex = !!m.regex;
