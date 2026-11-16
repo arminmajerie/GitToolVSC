@@ -10,14 +10,16 @@ test('Commit & Push batches refreshes, skips outgoing previews and reports each 
   const messages = [];
   let refreshes = 0;
   let conflictRepo;
+  const warnings = [];
+  let metadataChanged;
   let view;
   const tree = Array.from({ length: 40 }, (_, i) => ({ repo: `E:/fixture/repo-${i}` }));
   const load = Module._load;
   Module._load = function(id, parent, main) {
-    if (id === 'vscode') return { window: { setStatusBarMessage() {} } };
+    if (id === 'vscode') return { window: { setStatusBarMessage() {}, showWarningMessage: async message => { warnings.push(message); } } };
     if (parent?.filename.endsWith(`${path.sep}commitView.js`)) {
       if (id === './ctx') return { ctx: {
-        repos: { onDidChange: () => ({}), onDidChangeMeta: () => ({}), onDidChangeCurrent: () => ({}), ready: Promise.resolve() },
+        repos: { onDidChange: () => ({}), onDidChangeMeta: handler => { metadataChanged = handler; return {}; }, onDidChangeCurrent: () => ({}), ready: Promise.resolve() },
         ext: { globalState: { get: () => [], update: async () => {} } }
       } };
       if (id === './git') return {
@@ -61,4 +63,17 @@ test('Commit & Push batches refreshes, skips outgoing previews and reports each 
   await assert.rejects(view.commitChecked('next batch', false, true), /resolve merge conflicts/);
   assert.equal(pushes.length, 0, 'a blocker in the last repository must stop before any push');
   assert.equal(queries.length, 0, 'a blocker must stop before any commit status or stage operation');
+  assert.match(messages.at(-1).message, /failed/);
+  view.checkedRepos.clear();
+  await view.commitChecked('unchecked', false, true);
+  assert.match(warnings.at(-1), /No repositories selected/);
+  assert.match(messages.at(-1).message, /No repositories selected/);
+  await view.onMessage({ type: 'pushChecked' });
+  assert.match(warnings.at(-1), /No repositories selected/);
+  const before = refreshes;
+  metadataChanged(tree[0].repo);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(refreshes, before + 1, 'terminal commits and rewrites trigger refresh from metadata events');
+  assert.ok(view.metaDirtyRepos.has(tree[0].repo.toLowerCase()));
+  assert.ok(view.dirtyRepos.has(tree[0].repo.toLowerCase()));
 });

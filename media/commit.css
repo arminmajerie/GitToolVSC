@@ -1,4 +1,6 @@
-.commit-root { display: flex; flex-direction: column; height: 100%; }
+body { display: flex; flex-direction: column; }
+#app { flex: 1; min-height: 0; height: auto; }
+.commit-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .tabs { display: flex; align-items: center; gap: 2px; padding: 0 6px; border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, transparent)); flex: none; }
 .tab {
   background: none; border: none; border-bottom: 2px solid transparent; color: var(--vscode-descriptionForeground);
@@ -19,6 +21,8 @@
 .repository-row.active { color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground)); }
 .repository-row.unavailable { color: var(--vscode-disabledForeground); cursor: default; }
 .repository-row input { flex: none; }
+.changes > .tree-row.section { padding-left: 4px; }
+.tree-row.repository-group { padding-left: 18px; }
 .repository-row .repo-name { overflow: hidden; text-overflow: ellipsis; max-width: 42%; }
 .repository-row .tbtn { min-width: 20px; height: 20px; padding: 0 2px; }
 .banner { padding: 6px 10px; background: var(--vscode-inputValidation-warningBackground); border: 1px solid var(--vscode-inputValidation-warningBorder, transparent); margin: 4px; }
@@ -40,8 +44,11 @@
 .push-icon { padding: 2px 4px; }
 .push-icon img { width: 27px; height: 21px; display: block; }
 .check { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-textarea.msg { width: 100%; min-height: 70px; height: 110px; resize: vertical; padding: 6px; font-family: var(--vscode-editor-font-family); }
+textarea.msg { width: 100%; min-height: 70px; height: 110px; max-height: 35vh; resize: vertical; padding: 6px; font-family: var(--vscode-editor-font-family); }
 #batch-progress {
+  flex: none;
+  max-height: 20vh;
+  overflow: auto;
   padding: 8px;
   border-bottom: 1px solid var(--vscode-panel-border);
   color: var(--vscode-foreground);

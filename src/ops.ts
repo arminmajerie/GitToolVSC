@@ -8,6 +8,7 @@ import { repoName, RepoTreeNode } from './repos';
 import { nameStatus, openChanges, short } from './uris';
 import { withIndexLockRetry } from './indexLockRetry';
 import { applyPushPreparation, planPushPreparation } from './pushPreparation';
+import { showCheckoutConflict } from './checkoutConflict';
 
 export type RefKind = RefInfo['kind'] | 'rev';
 
@@ -231,20 +232,15 @@ async function switchSmart(repo: string, args: string[]): Promise<void> {
       showGitError(e);
       return;
     }
-    const c = await vscode.window.showWarningMessage(
-      'Local changes would be overwritten by checkout.',
-      { modal: true, detail: firstLines(e.message, 12) + '\n\nSmart Checkout stashes the changes, checks out and unstashes them again.' },
-      'Smart Checkout',
-      'Force Checkout'
-    );
-    if (c === 'Smart Checkout') {
-      if ((await run(repo, ['stash', 'push', '-m', 'Smart checkout'])) === undefined) return;
+    const c = await showCheckoutConflict(repo, args[args.length - 1], e.message);
+    if (c === 'stash') {
+      if ((await run(repo, ['stash', 'push', '-u', '-m', 'Smart checkout'])) === undefined) return;
       const ok = (await run(repo, args)) !== undefined;
       const popped = await run(repo, ['stash', 'pop']);
       if (popped === undefined) vscode.window.showWarningMessage('The unstash had conflicts. Resolve them; the changes are still in the stash list.');
       else if (ok) vscode.window.setStatusBarMessage('Smart checkout done', 4000);
-    } else if (c === 'Force Checkout') {
-      const sure = await vscode.window.showWarningMessage('Discard the local changes that block the checkout?', { modal: true }, 'Discard and Checkout');
+    } else if (c === 'discard') {
+      const sure = await vscode.window.showWarningMessage('Discard tracked local changes and checkout?', { modal: true, detail: 'Git may discard tracked changes beyond the files listed. Untracked files are not cleaned.' }, 'Discard and Checkout');
       if (sure) await run(repo, [...args, '--discard-changes']);
     }
   }

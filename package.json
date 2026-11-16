@@ -17,7 +17,7 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "vscode": "^1.145.0"
+    "vscode": "^1.120.0"
   },
   "categories": [
     "SCM Providers",
@@ -474,6 +474,18 @@
         "title": "Add to .gitignore"
       },
       {
+        "command": "vscgit.ch.exclude",
+        "title": "Add to .git/info/exclude"
+      },
+      {
+        "command": "vscgit.ignore",
+        "title": ".gitignore"
+      },
+      {
+        "command": "vscgit.exclude",
+        "title": ".git/info/exclude"
+      },
+      {
         "command": "vscgit.ch.shelve",
         "title": "Shelve Changes..."
       },
@@ -502,9 +514,17 @@
       {
         "id": "vscgit.resource",
         "label": "Git"
+      },
+      {
+        "id": "vscgit.ignoreDestination",
+        "label": "Add to Ignore"
       }
     ],
     "menus": {
+      "vscgit.ignoreDestination": [
+        { "command": "vscgit.ignore", "group": "1_ignore@1" },
+        { "command": "vscgit.exclude", "group": "1_ignore@2" }
+      ],
       "explorer/context": [
         {
           "submenu": "vscgit.resource",
@@ -529,6 +549,10 @@
         {
           "command": "vscgit.add",
           "group": "1_add@1"
+        },
+        {
+          "submenu": "vscgit.ignoreDestination",
+          "group": "1_add@2"
         },
         {
           "command": "vscgit.annotate",
@@ -884,6 +908,11 @@
           "when": "webviewSection == 'change' && changeGroup == 'untracked'"
         },
         {
+          "command": "vscgit.ch.exclude",
+          "group": "4_misc@1.5",
+          "when": "webviewSection == 'change' && changeGroup == 'untracked'"
+        },
+        {
           "command": "vscgit.ch.history",
           "group": "4_misc@2",
           "when": "webviewSection == 'change' && changeGroup != 'untracked'"
@@ -1115,6 +1144,10 @@
           "when": "false"
         },
         {
+          "command": "vscgit.ch.exclude",
+          "when": "false"
+        },
+        {
           "command": "vscgit.ch.shelve",
           "when": "false"
         },
@@ -1204,7 +1237,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "@types/vscode": "^1.145.0",
+    "@types/vscode": "~1.120.0",
     "@vscode/vsce": "^4.1.0",
     "gifenc": "^1.0.3",
     "pngjs": "^7.0.0",

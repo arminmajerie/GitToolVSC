@@ -6,8 +6,13 @@ body.page-log { background: var(--vscode-panel-background, var(--vscode-editor-b
 .branches-pane.fill, .details-pane.fill { flex: 1; width: auto; min-width: 0; }
 .vtoolbar { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border-right: 1px solid var(--vscode-panel-border, transparent); }
 .branches-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.branch-search { padding: 4px; }
-.branch-search input { width: 100%; padding: 3px 6px; }
+.branch-search { display: flex; align-items: center; gap: 2px; padding: 4px; }
+.branch-search input { flex: 1; min-width: 0; padding: 3px 6px; }
+.branch-search .tbtn { flex: none; }
+.branch-tracking { display: inline-flex; gap: 4px; flex: none; margin-left: auto; padding-left: 6px; }
+.branch-sync { display: inline-flex; align-items: center; gap: 3px; min-width: 30px; justify-content: center; height: 18px; padding: 0 4px; border-radius: 3px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.branch-sync.ahead { color: var(--vscode-gitDecoration-addedResourceForeground, #73c991); background: var(--vscode-diffEditor-insertedTextBackground, #73c99120); }
+.branch-sync.behind { color: var(--vscode-textLink-foreground, #4fa3e0); background: var(--vscode-diffEditor-unchangedRegionBackground, #4fa3e020); }
 .branch-list { flex: 1; overflow: auto; }
 .tree-row.branch.current > .name { font-weight: 600; }
 .head-row { cursor: default; }

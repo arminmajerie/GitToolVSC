@@ -7,9 +7,15 @@ import { repoName, samePath } from './repos';
 /** Branch widget in the status bar (opens the branches popup). */
 export class StatusBar implements vscode.Disposable {
   private readonly item = vscode.window.createStatusBarItem('vscgit.branch', vscode.StatusBarAlignment.Left, 99);
+  private readonly gitItem = vscode.window.createStatusBarItem('vscgit.openGit', vscode.StatusBarAlignment.Left, 100);
   private readonly disposables: vscode.Disposable[] = [];
 
   constructor() {
+    this.gitItem.name = 'Git Tool';
+    this.gitItem.text = '$(source-control) Git';
+    this.gitItem.tooltip = 'Open Git: branches, log and changes (Alt+9)';
+    this.gitItem.command = 'vscgit.openLog';
+    this.gitItem.show();
     this.item.name = 'Git Tool Branch';
     this.item.command = 'vscgit.branches';
     this.disposables.push(
@@ -57,6 +63,7 @@ export class StatusBar implements vscode.Disposable {
 
   dispose(): void {
     this.item.dispose();
+    this.gitItem.dispose();
     this.disposables.forEach(d => d.dispose());
   }
 }

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { Blame } from './blame';
 import { ctx } from './ctx';
 import { git, gitTry } from './git';
+import { addIgnoreEntries } from './ignore';
 import * as ops from './ops';
 import { parseStatus } from './parse';
 import { relPath } from './repos';
@@ -137,6 +138,8 @@ export function registerResourceCommands(blame: Blame): vscode.Disposable[] {
     reg('vscgit.add', async t => {
       await addSelectionTree(t.repo, t.rels);
     }),
+    reg('vscgit.ignore', t => addIgnoreEntries(t.repo, t.rels)),
+    reg('vscgit.exclude', t => addIgnoreEntries(t.repo, t.rels, true)),
     reg('vscgit.annotate', async t => {
       if (t.isDir) return;
       await blame.toggle(workUri(t.repo, one(t)));

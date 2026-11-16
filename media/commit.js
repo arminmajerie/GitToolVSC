@@ -259,12 +259,10 @@ function renderCommitTab() {
     : 'Nothing to push in the checked repositories';
   const push = h('button', { class: 'secondary push-icon', title: `Push\n${syncTitle}`, onClick: () => vscode.postMessage({ type: 'pushChecked' }) }, h('img', { src: window.vscgitAssets.push, alt: 'Push' }));
   const forcePush = h('button', { class: 'secondary push-icon' + (diverged.length ? ' needed' : ''), title: `Force push (git push --force)\n${syncTitle}`, onClick: () => vscode.postMessage({ type: 'pushChecked', force: true }) }, h('img', { src: window.vscgitAssets.forcePush, alt: 'Force push' }));
-  const commitAll = h('button', { class: 'secondary', text: 'Commit', onClick: () => vscode.postMessage({ type: 'commitChecked', message: S.message, amend: S.amend, push: false }) });
-  const commitPushAll = h('button', { class: 'secondary', text: 'Commit&Push', onClick: () => vscode.postMessage({ type: 'commitChecked', message: S.message, amend: S.amend, push: true }) });
   const box = h('div', { class: 'commit-box' },
     h('div', { class: 'row' }, h('label', { for: 'amend', class: 'check' }, amend, ' Amend'), button('history', 'Commit Message History', () => repoMessage('history'))),
     msg,
-    h('div', { class: 'row' }, commitAll, commitPushAll, h('span', { class: 'push-actions' + (diverged.length ? ' diverged' : ''), title: syncTitle, text: syncText }), push, forcePush));
+    h('div', { class: 'row' }, el.commitBtn, el.pushBtn, h('span', { class: 'push-actions' + (diverged.length ? ' diverged' : ''), title: syncTitle, text: syncText }), push, forcePush));
   el.body.append(tb, tree, box);
   updateCommitButton();
 }
@@ -272,11 +270,11 @@ function renderCommitTab() {
 function updateCommitButton() {
   const d = repoData();
   if (!el.commitBtn || !d) return;
-  const staged = (d.staged || []).length;
-  const unstaged = (d.unstaged || []).length;
-  el.commitBtn.textContent = S.amend ? 'Amend Commit' : staged ? 'Commit' : 'Commit All';
+  const checked = repositories().filter(r => r.checked !== false);
+  const staged = checked.reduce((count, r) => count + (r.staged || []).length, 0);
+  el.commitBtn.textContent = S.amend ? 'Amend Commit' : 'Commit';
   el.commitBtn.title = S.amend ? 'Amend the last commit' : staged ? `Commit ${staged} staged file(s)` : 'Commit all tracked changes (git commit -a)';
-  const can = !!S.message.trim() && (S.amend || staged > 0 || unstaged > 0) && !(d.conflicts || []).length;
+  const can = !!S.message.trim() && checked.length > 0 && (S.amend || staged > 0) && !checked.some(r => (r.conflicts || []).length);
   el.commitBtn.disabled = !can;
   el.pushBtn.disabled = !can;
 }

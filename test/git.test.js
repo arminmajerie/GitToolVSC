@@ -19,6 +19,65 @@ const gitAt = (cwd, ...args) => execFileSync('git', ['-c', 'core.quotepath=false
 
 test.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
+test('ignore actions append literal paths to shared or local rules without changing tracked files', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vscgit-ignore-'));
+  const Module = require('node:module');
+  const load = Module._load;
+  const changes = [];
+  let addIgnoreEntries;
+  try {
+    gitAt(root, 'init', '-q', '-b', 'main');
+    Module._load = function(id, parent, main) {
+      if (parent?.filename.endsWith(`${path.sep}ignore.js`)) {
+        if (id === './ctx') return { ctx: { repos: { changed: repo => changes.push(repo) } } };
+        if (id === './git') return { git: async (repo, args) => gitAt(repo, ...args) };
+      }
+      return load.call(this, id, parent, main);
+    };
+    try { ({ addIgnoreEntries } = require('../out/ignore.js')); }
+    finally { Module._load = load; }
+    const writeFile = (name, value = 'fixture') => fs.writeFileSync(path.join(root, name), value);
+    writeFile('tracked.txt');
+    gitAt(root, 'add', 'tracked.txt');
+    gitAt(root, 'commit', '-q', '-m', 'initial');
+    writeFile('.gitignore', '# keep this comment\r\n/existing\r\n');
+    writeFile('literal[1].txt');
+    writeFile('literal1.txt');
+    writeFile('with space.txt');
+    fs.mkdirSync(path.join(root, 'generated'));
+    writeFile('generated/item.txt');
+    await addIgnoreEntries(root, ['literal[1].txt', 'with space.txt', 'generated', 'tracked.txt']);
+    const rules = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
+    assert.ok(rules.startsWith('# keep this comment\r\n/existing\r\n'));
+    assert.ok(rules.includes('/generated/\r\n'));
+    await addIgnoreEntries(root, ['generated', 'literal[1].txt', 'generated']);
+    assert.equal(fs.readFileSync(path.join(root, '.gitignore'), 'utf8'), rules);
+    const ignored = gitAt(root, 'check-ignore', '--', 'literal[1].txt', 'literal1.txt', 'with space.txt', 'generated/item.txt').trim().split(/\r?\n/);
+    assert.deepEqual(ignored, ['literal[1].txt', 'with space.txt', 'generated/item.txt']);
+    assert.equal(gitAt(root, 'ls-files', '--', 'tracked.txt').trim(), 'tracked.txt');
+    writeFile('local.txt');
+    await addIgnoreEntries(root, ['local.txt'], true);
+    assert.match(gitAt(root, 'check-ignore', '-v', '--', 'local.txt'), /info.exclude.*local\.txt/);
+    assert.equal(fs.readFileSync(path.join(root, '.gitignore'), 'utf8'), rules);
+    const linked = path.join(root, 'linked');
+    gitAt(root, 'worktree', 'add', '-q', '--detach', linked, 'HEAD');
+    fs.writeFileSync(path.join(linked, 'private.txt'), 'fixture');
+    await addIgnoreEntries(linked, ['private.txt'], true);
+    assert.match(gitAt(linked, 'check-ignore', '-v', '--', 'private.txt'), /info.exclude.*private\.txt/);
+    await assert.rejects(addIgnoreEntries(root, ['../outside']), /inside the repository/);
+    await assert.rejects(addIgnoreEntries(root, ['..\\outside']), /inside the repository/);
+    await assert.rejects(addIgnoreEntries(root, ['.']), /repository root/);
+    await assert.rejects(addIgnoreEntries(root, ['bad\nrule']), /inside the repository/);
+    assert.equal(changes.length, 3);
+    const manifest = require('../package.json');
+    assert.deepEqual(manifest.contributes.menus['vscgit.ignoreDestination'].map(item => item.command), ['vscgit.ignore', 'vscgit.exclude']);
+    assert.ok(manifest.contributes.menus['vscgit.resource'].some(item => item.submenu === 'vscgit.ignoreDestination'));
+  } finally {
+    Module._load = load;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('submodule staging is independent from the parent gitlink', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vscgit-submodule-test-'));
   const child = path.join(root, 'ib-server');

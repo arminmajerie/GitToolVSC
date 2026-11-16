@@ -292,14 +292,22 @@ function branchRow(item, depth) {
   const b = item.branch;
   const isCur = item.kind === 'local' && S.branches.current === b.name;
   const ic = isCur ? icon('current', 'ic-current') : b.favorite ? icon('star', 'ic-star') : item.kind === 'tag' ? icon('tag', 'ic-tag') : icon('branch', 'ic-branch');
-  const track = b.track ? b.track.replace(/\[|\]/g, '').replace(/ahead (\d+)/, '\u2191$1').replace(/behind (\d+)/, '\u2193$1').replace(/,\s*/, ' ') : '';
+  const ahead = Number(/ahead (\d+)/.exec(b.track || '')?.[1] || 0);
+  const behind = Number(/behind (\d+)/.exec(b.track || '')?.[1] || 0);
+  const tracking = h('span', { class: 'branch-tracking' });
+  for (const [direction, count, label] of [
+    ['ahead', ahead, 'local commit(s) to push'], ['behind', behind, 'remote commit(s) to pull']
+  ]) {
+    if (count) tracking.append(h('span', { class: 'branch-sync ' + direction, title: `${count} ${label}`, 'aria-label': `${count} ${label}` },
+      h('span', { 'aria-hidden': 'true', text: direction === 'ahead' ? '\u2191' : '\u2193' }), h('span', { text: String(count) })));
+  }
   const sel = S.selectedBranch && S.selectedBranch.kind === item.kind && S.selectedBranch.name === b.name;
   const row = h('div', {
     class: 'tree-row branch' + (sel ? ' selected' : '') + (isCur ? ' current' : ''),
     title: b.name + (b.upstream ? `\nTracking ${b.upstream} ${b.track || ''}` : ''),
     ctx: { webviewSection: 'branch', repo: S.repo, refName: b.name, branchKind: item.kind, isCurrent: isCur, hasUpstream: !!b.upstream }
   },
-  h('span', { class: 'twisty' }), ic, h('span', { class: 'name', text: item.label }), track ? h('span', { class: 'dim', text: track }) : null);
+  h('span', { class: 'twisty' }), ic, h('span', { class: 'name', text: item.label }), tracking);
   row.style.paddingLeft = depth * 14 + 4 + 'px';
   row.addEventListener('click', () => {
     S.selectedBranch = { kind: item.kind, name: b.name, hash: b.hash };
@@ -359,16 +367,27 @@ function renderBranches() {
     button('expand', 'Expand All', () => { S.collapsedBranches.clear(); renderBranches(); }),
     button('collapse', 'Collapse All', collapseAllBranches)
   );
-  const search = h('input', { class: 'search', type: 'text', placeholder: 'Search branches', value: S.branchSearch });
+  const search = h('input', { class: 'search', type: 'text', placeholder: 'Search branches', 'aria-label': 'Search branches', value: S.branchSearch });
   let searchTimer;
+  const clear = button('close', 'Clear branch search', () => {
+    clearTimeout(searchTimer);
+    search.value = '';
+    S.branchSearch = '';
+    clear.disabled = true;
+    fillBranchList(el.branchList);
+    el.branchList.scrollTop = 0;
+    search.focus();
+  }, { disabled: !S.branchSearch });
   search.addEventListener('input', () => {
     clearTimeout(searchTimer);
+    clear.disabled = !search.value;
     searchTimer = setTimeout(() => { S.branchSearch = search.value; fillBranchList(el.branchList); el.branchList.scrollTop = 0; }, 120);
   });
+  search.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); clear.click(); } });
   const list = h('div', { class: 'branch-list' });
   el.branchList = list;
   fillBranchList(list);
-  pane.append(tb, h('div', { class: 'branches-main' }, h('div', { class: 'branch-search' }, search), list));
+  pane.append(tb, h('div', { class: 'branches-main' }, h('div', { class: 'branch-search' }, search, clear), list));
   list.scrollTop = scroll;
 }
 

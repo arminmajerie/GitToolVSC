@@ -105,6 +105,7 @@ function webviewCommands(): vscode.Disposable[] {
     cmd<ChangeCtx>('vscgit.ch.rollback', a => rollback(a.repo, changePaths(a))),
     cmd<ChangeCtx>('vscgit.ch.delete', a => deleteUntracked(a.repo, changePaths(a))),
     cmd<ChangeCtx>('vscgit.ch.ignore', a => addToGitignore(a.repo, changePaths(a))),
+    cmd<ChangeCtx>('vscgit.ch.exclude', a => addToGitignore(a.repo, changePaths(a), true)),
     cmd<ChangeCtx>('vscgit.ch.shelve', a => ops.stash(a.repo, changePaths(a))),
     cmd<ChangeCtx>('vscgit.ch.history', a => ctx.log.show(a.repo, { paths: [a.path] })),
 

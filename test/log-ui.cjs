@@ -80,6 +80,34 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(() => document.querySelector('.commit-row[data-i="4000"]'));
     await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'reveal', hash: 'c10' } })));
     await page.waitForFunction(() => document.querySelector('.commit-row.selected[data-i="10"]'));
+    await send({ type: 'init', part: 'branches', mode: 'main' });
+    await send({ type: 'branches', current: 'main', head: 'tip0', local: [
+      { name: 'main', hash: 'tip0', track: '[ahead 3, behind 18]', upstream: 'origin/main' },
+      { name: 'feature', hash: 'tip1', track: '[behind 80]', upstream: 'origin/feature' }
+    ], remote: [], tags: [] });
+    const branchSearch = page.getByRole('textbox', { name: 'Search branches', exact: true });
+    await branchSearch.fill('feature');
+    await page.waitForFunction(() => document.querySelectorAll('.tree-row.branch').length === 1);
+    await page.getByRole('button', { name: 'Clear branch search', exact: true }).click();
+    assert.equal(await branchSearch.inputValue(), '');
+    assert.equal(await page.locator('.tree-row.branch').count(), 2);
+    assert.equal(await branchSearch.evaluate(input => document.activeElement === input), true);
+    assert.equal(await page.locator('.branch-sync.ahead').textContent(), '\u21913');
+    assert.deepEqual(await page.locator('.branch-sync.behind').allTextContents(), ['\u219318', '\u219380']);
+    await branchSearch.fill('main');
+    await branchSearch.press('Escape');
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.tree-row.branch').count(), 2, 'clear cancels pending search debounce');
+    for (const width of [1100, 320]) {
+      await page.setViewportSize({ width, height: 700 });
+      const clearBounds = await page.getByRole('button', { name: 'Clear branch search', exact: true }).boundingBox();
+      assert.ok(clearBounds && clearBounds.x >= 0 && clearBounds.x + clearBounds.width <= width);
+      for (const badge of await page.locator('.branch-sync').all()) {
+        const bounds = await badge.boundingBox();
+        assert.ok(bounds && bounds.x >= 0 && bounds.x + bounds.width <= width);
+      }
+      await page.screenshot({ path: path.join(__dirname, `../branch-ui-${width}.png`) });
+    }
     console.log(`5000-commit render ${renderMs.toFixed(0)}ms`);
     assert.deepEqual(errors, []);
     await page.screenshot({ path: path.join(__dirname, '../log-ui-verified.png') });

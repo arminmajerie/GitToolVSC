@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VS%20Code-1.145%2B-0078d4?logo=visualstudiocode&logoColor=white" alt="VS Code 1.145+">
+  <img src="https://img.shields.io/badge/VS%20Code-1.120%2B-0078d4?logo=visualstudiocode&logoColor=white" alt="VS Code 1.120+">
   <img src="https://img.shields.io/badge/git-command%20line-f05032?logo=git&logoColor=white" alt="Uses the git command line">
   <img src="https://img.shields.io/badge/multi--repo-supported-8f6bff" alt="Multi-repo">
 </p>

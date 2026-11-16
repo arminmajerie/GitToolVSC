@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { ctx } from './ctx';
 import { git, gitTry } from './git';
+import { addIgnoreEntries } from './ignore';
 import { webviewHtml } from './html';
 import * as ops from './ops';
 import { FileChange, groupStatus, parseNameStatus, parseStatus, StatusGroups, StashEntry } from './parse';
@@ -44,20 +45,8 @@ export async function openChangeDiff(repo: string, group: Group, f: FileChange):
   await openDiff(revUri(repo, f.path, INDEX), right, `${name} (Staged \u2194 Local)`);
 }
 
-export async function addToGitignore(repo: string, paths: string[]): Promise<void> {
-  const file = vscode.Uri.file(path.join(repo, '.gitignore'));
-  let text = '';
-  try {
-    text = Buffer.from(await vscode.workspace.fs.readFile(file)).toString('utf8');
-  } catch {
-    // new file
-  }
-  const lines = paths.map(p => '/' + p.replace(/^\/+/, ''));
-  const add = lines.filter(l => !text.split(/\r?\n/).includes(l));
-  if (!add.length) return;
-  const sep = text && !text.endsWith('\n') ? '\n' : '';
-  await vscode.workspace.fs.writeFile(file, Buffer.from(text + sep + add.join('\n') + '\n', 'utf8'));
-  ctx.repos.changed(repo);
+export async function addToGitignore(repo: string, paths: string[], local = false): Promise<void> {
+  await addIgnoreEntries(repo, paths, local);
 }
 
 export async function deleteUntracked(repo: string, paths: string[]): Promise<void> {
@@ -132,7 +121,11 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
 
   constructor() {
     this.disposables.push(
-      ctx.repos.onDidChangeMeta(r => this.metaDirtyRepos.add(r.toLowerCase())),
+      ctx.repos.onDidChangeMeta(r => {
+        this.metaDirtyRepos.add(r.toLowerCase());
+        this.dirtyRepos.add(r.toLowerCase());
+        if (this.repo && this.repoTree.some(node => samePath(r, node.repo))) void this.refresh();
+      }),
       ctx.repos.onDidChange(r => {
         this.dirtyRepos.add(r.toLowerCase());
         if (this.repo && this.repoTree.some(node => samePath(r, node.repo))) void this.refresh();
@@ -224,10 +217,11 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
     const loadStatus = async (node: RepoTreeNode) => {
       const key = node.repo.toLowerCase();
       const cached = this.statusCache.get(key);
-      if (!this.dirtyRepos.has(key) && cached && Date.now() - (this.statusLoadedAt.get(key) ?? 0) < 5000) return structuredClone(cached);
+      if (!this.dirtyRepos.has(key) && !this.metaDirtyRepos.has(key) && cached && Date.now() - (this.statusLoadedAt.get(key) ?? 0) < 5000) return structuredClone(cached);
       // Saving a working tree file cannot change branch, stashes or rebase state: only re-run status.
       const metaFresh = cached && this.dirtyRepos.has(key) && !this.metaDirtyRepos.has(key);
       this.metaDirtyRepos.delete(key);
+      this.dirtyRepos.delete(key);
       const [st, branch, stashes, state, sync] = await Promise.all([
         git(node.repo, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=dirty']),
         metaFresh ? cached.branch : ops.currentBranch(node.repo),
@@ -239,7 +233,6 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
       const status = { ...node, repoName: repoName(node.repo), branch, state, stashes, sync, childPaths: tree.filter(child => samePath(child.parent ?? '', node.repo) && child.path).map(child => child.path!), checked: this.checkedRepos.has(node.repo.toLowerCase()), ...groups };
       this.statusCache.set(key, structuredClone(status));
       this.statusLoadedAt.set(key, Date.now());
-      this.dirtyRepos.delete(key);
       return status;
     };
     const statuses: Awaited<ReturnType<typeof loadStatus>>[] = new Array(tree.length);
@@ -322,11 +315,20 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
     }
     if (m.type === 'pushChecked') {
       if (this.batchRunning) return;
+      const selected = this.orderedCheckedRepos();
+      if (!selected.length) {
+        const message = 'No repositories selected. Check the repository checkbox before pushing.';
+        this.reportProgress(message);
+        void vscode.window.showWarningMessage(message);
+        return;
+      }
       this.batchRunning = true;
       const tree = [...this.repoTree];
+      let result = 'Push stopped before completion.';
       try {
-        const ordered = await this.reposWithOutgoing(this.orderedCheckedRepos());
+        const ordered = await this.reposWithOutgoing(selected);
         if (!ordered.length) {
+          result = 'Nothing to push in the checked repositories.';
           void vscode.window.showInformationMessage('Nothing to push: every checked repository already matches its remote branch.');
           return;
         }
@@ -341,10 +343,15 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
           this.reportProgress(`Pushing ${index + 1}/${ordered.length}: ${repoName(node.repo)}`);
           await ops.push(node.repo, undefined, !!m.force, false, false, tree);
         }
+        result = 'Push completed.';
+      } catch (error) {
+        result = 'Push failed. Review the Git error; completed pushes were not rolled back.';
+        throw error;
       } finally {
         this.batchRunning = false;
-        this.reportProgress('Push batch finished. Refreshing repositories…');
-        void this.refresh();
+        this.statusCache.clear();
+        this.reportProgress(result);
+        await this.refresh();
       }
       return;
     }
@@ -443,9 +450,16 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
   private async commitChecked(message: string, amend: boolean, push: boolean): Promise<void> {
     if (!message.trim()) return void vscode.window.showWarningMessage('Enter a commit message.');
     if (this.batchRunning) return;
-    this.batchRunning = true;
-    try {
     const ordered = this.orderedCheckedRepos();
+    if (!ordered.length) {
+      const message = 'No repositories selected. Check the repository checkbox before committing or pushing.';
+      this.reportProgress(message);
+      void vscode.window.showWarningMessage(message);
+      return;
+    }
+    this.batchRunning = true;
+    let result = 'Batch stopped before completion. Review the Git error or warning.';
+    try {
     const tree = [...this.repoTree];
     if (push) await this.preparePushBatch(ordered, tree);
     const selected = new Set(ordered.map(node => node.repo.toLowerCase()));
@@ -491,10 +505,15 @@ export class CommitView implements vscode.WebviewViewProvider, vscode.Disposable
         await ops.push(node.repo, undefined, false, false, false, tree);
       }
     }
+    result = push ? 'Commit & Push completed.' : 'Commit batch completed.';
+    } catch (error) {
+      result = 'Commit batch failed. Review the Git error; completed operations were not rolled back.';
+      throw error;
     } finally {
       this.batchRunning = false;
-      this.reportProgress('Batch ended. Refreshing repositories…');
-      void this.refresh();
+      this.statusCache.clear();
+      this.reportProgress(result);
+      await this.refresh();
     }
   }
 
